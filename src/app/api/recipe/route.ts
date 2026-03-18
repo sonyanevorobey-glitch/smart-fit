@@ -1,13 +1,16 @@
 import { NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
+import { getSessionUserId } from '@/lib/auth';
 
-const client = new Anthropic();
+const client = new OpenAI();
 
-// Simple in-memory cache: dish name → recipe
 const cache = new Map<string, object>();
 
 export async function POST(req: Request) {
   try {
+    const userId = await getSessionUserId();
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const { name, calories, protein, fat, carbs, weight_grams } = await req.json();
     if (!name) return NextResponse.json({ error: 'Missing name' }, { status: 400 });
 
@@ -45,13 +48,13 @@ ${kbzhu}
 - cook_time в минутах
 - Всё на русском языке`;
 
-    const message = await client.messages.create({
-      model: 'claude-sonnet-4-6',
+    const message = await client.chat.completions.create({
+      model: 'gpt-4o',
       max_tokens: 1024,
       messages: [{ role: 'user', content: prompt }],
     });
 
-    const text = message.content[0].type === 'text' ? message.content[0].text : '';
+    const text = message.choices[0].message.content ?? '';
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return NextResponse.json({ error: 'Failed to parse AI response' }, { status: 500 });
 
@@ -60,6 +63,6 @@ ${kbzhu}
 
     return NextResponse.json(recipe);
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    console.error(e); return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

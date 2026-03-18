@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { query, queryOne } from '@/lib/db';
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { getSessionUserId } from '@/lib/auth';
 import type { User, MealPlan, MealPlanItem } from '@/lib/types';
 
-const client = new Anthropic();
+const client = new OpenAI();
 
 export async function POST(req: Request) {
   try {
@@ -15,6 +15,9 @@ export async function POST(req: Request) {
     const { date, meal_index } = body;
     if (date === undefined || meal_index === undefined) {
       return NextResponse.json({ error: 'Missing date or meal_index' }, { status: 400 });
+    }
+    if (!Number.isInteger(meal_index) || meal_index < 0) {
+      return NextResponse.json({ error: 'Invalid meal_index' }, { status: 400 });
     }
 
     const user = await queryOne<User>('SELECT * FROM users WHERE id=$1', [userId]);
@@ -54,11 +57,11 @@ ${prefNote}
 
 Требования: простое блюдо, ДРУГОЕ чем "${targetMeal.name}", название на русском, калории ±10% от целевых.`;
 
-    const message = await client.messages.create({
-      model: 'claude-sonnet-4-6', max_tokens: 256,
+    const message = await client.chat.completions.create({
+      model: 'gpt-4o', max_tokens: 256,
       messages: [{ role: 'user', content: prompt }],
     });
-    const text = message.content[0].type === 'text' ? message.content[0].text : '';
+    const text = message.choices[0].message.content ?? '';
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return NextResponse.json({ error: 'Failed to parse AI response' }, { status: 500 });
 
@@ -78,6 +81,6 @@ ${prefNote}
     );
     return NextResponse.json(updated);
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    console.error(e); return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

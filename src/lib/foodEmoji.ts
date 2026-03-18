@@ -13,6 +13,7 @@ export function getFoodEmoji(name: string): string {
   if (/(говяд|стейк|beef|бургер|burger)/.test(n)) return '🥩';
   if (/(свинин|свин|бекон|bacon|ветчин)/.test(n)) return '🥓';
   if (/(баранин|ягнён|lamb)/.test(n)) return '🍖';
+  if (/(печень|liver|почки|kidney|субпродукт)/.test(n)) return '🍖';
   if (/(сосиск|колбас|сардельк|хот-дог|hot.?dog)/.test(n)) return '🌭';
 
   // ── Рыба и морепродукты ────────────────────────────────
@@ -93,7 +94,7 @@ export function getFoodEmoji(name: string): string {
   if (/(мороженое|ice.?cream|gelato)/.test(n)) return '🍦';
   if (/(конфет|карамел|candy|sweet|зефир|мармелад)/.test(n)) return '🍬';
   if (/(варень|джем|повидл|honey|мёд|jam)/.test(n)) return '🍯';
-  if (/(печень|cookie|biscuit|крекер|cracke)/.test(n)) return '🍪';
+  if (/(cookie|biscuit|крекер|cracke)/.test(n)) return '🍪';
   if (/(вафл|wafer)/.test(n)) return '🧇';
   if (/(батончик|энергетик|protein bar|протеин)/.test(n)) return '🍫';
   if (/(мёд|honey)/.test(n)) return '🍯';

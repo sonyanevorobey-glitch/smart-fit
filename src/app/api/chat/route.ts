@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { query, queryOne } from '@/lib/db';
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { getSessionUserId } from '@/lib/auth';
 import type { User, FoodLog, ChatMessage } from '@/lib/types';
 
-const client = new Anthropic();
+const client = new OpenAI();
 
 export async function GET() {
   try {
@@ -16,7 +16,7 @@ export async function GET() {
     );
     return NextResponse.json(messages);
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    console.error(e); return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -57,21 +57,22 @@ ${todayLogs.length > 0 ? `- Блюда: ${todayLogs.map(f => `${f.name} (${f.cal
       'SELECT role, content FROM chat_messages WHERE user_id=$1 ORDER BY created_at DESC LIMIT 10',
       [userId]
     );
-    const messages: Anthropic.Messages.MessageParam[] = [
+    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+      { role: 'system', content: systemPrompt },
       ...history.reverse().slice(0, -1).map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
       { role: 'user', content: userMessage },
     ];
 
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-6', max_tokens: 512,
-      system: systemPrompt, messages,
+    const response = await client.chat.completions.create({
+      model: 'gpt-4o', max_tokens: 512,
+      messages,
     });
-    const assistantText = response.content[0].type === 'text' ? response.content[0].text : '';
+    const assistantText = response.choices[0].message.content ?? '';
     await query('INSERT INTO chat_messages (user_id, role, content) VALUES ($1,$2,$3)', [userId, 'assistant', assistantText]);
 
     return NextResponse.json({ message: assistantText });
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    console.error(e); return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -82,6 +83,6 @@ export async function DELETE() {
     await query('DELETE FROM chat_messages WHERE user_id=$1', [userId]);
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    console.error(e); return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

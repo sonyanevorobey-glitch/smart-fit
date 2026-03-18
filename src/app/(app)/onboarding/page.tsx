@@ -165,6 +165,7 @@ export default function OnboardingPage() {
           body: JSON.stringify({
             ...form,
             food_preferences: foodPrefs,
+            reset: true,
           }),
         });
         const data = await res.json();

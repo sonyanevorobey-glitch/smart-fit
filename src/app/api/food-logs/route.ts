@@ -15,7 +15,7 @@ export async function GET(req: Request) {
     );
     return NextResponse.json(logs);
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    console.error(e); return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     );
     return NextResponse.json(log);
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    console.error(e); return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -46,6 +46,6 @@ export async function DELETE(req: Request) {
     await query('DELETE FROM food_logs WHERE id=$1 AND user_id=$2', [id, userId]);
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    console.error(e); return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -13,7 +13,7 @@ export async function GET() {
     );
     return NextResponse.json(logs);
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    console.error(e); return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -33,6 +33,6 @@ export async function POST(req: Request) {
     await query('UPDATE users SET weight=$1 WHERE id=$2', [body.weight, userId]);
     return NextResponse.json(log);
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    console.error(e); return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

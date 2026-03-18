@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { getSessionUserId } from '@/lib/auth';
 
-const client = new Anthropic();
+const client = new OpenAI();
 
 export async function POST(req: Request) {
   try {
@@ -35,29 +35,25 @@ ${description ? `Описание: "${description}"` : 'Смотри на фот
 - Все значения реалистичные для одной порции
 - name — короткое русское название`;
 
-    type ImageMediaType = 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
-
-    const content: Anthropic.MessageParam['content'] = imageBase64
+    const content: OpenAI.Chat.Completions.ChatCompletionContentPart[] = imageBase64
       ? [
           {
-            type: 'image',
-            source: {
-              type: 'base64',
-              media_type: (mimeType ?? 'image/jpeg') as ImageMediaType,
-              data: imageBase64,
+            type: 'image_url',
+            image_url: {
+              url: `data:${mimeType ?? 'image/jpeg'};base64,${imageBase64}`,
             },
           },
           { type: 'text', text: textPrompt },
         ]
-      : textPrompt;
+      : [{ type: 'text', text: textPrompt }];
 
-    const message = await client.messages.create({
-      model: 'claude-sonnet-4-6',
+    const message = await client.chat.completions.create({
+      model: 'gpt-4o',
       max_tokens: 512,
       messages: [{ role: 'user', content }],
     });
 
-    const text = message.content[0].type === 'text' ? message.content[0].text : '';
+    const text = message.choices[0].message.content ?? '';
     const cleaned = text.replace(/^```[a-z]*\n?/m, '').replace(/\n?```$/m, '').trim();
     const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return NextResponse.json({ error: 'Failed to parse AI response' }, { status: 500 });
@@ -71,6 +67,6 @@ ${description ? `Описание: "${description}"` : 'Смотри на фот
     }
     return NextResponse.json(parsed);
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    console.error(e); return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

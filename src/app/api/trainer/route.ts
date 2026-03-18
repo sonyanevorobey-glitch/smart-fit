@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
 import { queryOne } from '@/lib/db';
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { getSessionUserId } from '@/lib/auth';
 import type { User } from '@/lib/types';
 
-const client = new Anthropic();
+const client = new OpenAI();
 
-// Repairs common Claude JSON issues: unescaped quotes inside string values
 function repairJson(str: string): string {
   let result = '';
   let inString = false;
@@ -23,13 +22,11 @@ function repairJson(str: string): string {
         inString = true;
         result += ch;
       } else {
-        // Peek ahead: if next non-whitespace is a JSON structural char, this is a closing quote
         const rest = str.slice(i + 1).trimStart();
         if (/^[,\}\]:]/.test(rest) || rest === '') {
           inString = false;
           result += ch;
         } else {
-          // Unescaped quote inside a string value — escape it
           result += '\\"';
         }
       }
@@ -101,15 +98,16 @@ export async function POST(req: Request) {
 - tip — БЕЗ кавычек внутри строки
 - Все тексты на русском`;
 
-    const message = await client.messages.create({
-      model: 'claude-sonnet-4-6',
+    const message = await client.chat.completions.create({
+      model: 'gpt-4o',
       max_tokens: 4096,
-      system: 'Отвечай ТОЛЬКО чистым JSON без markdown, без кавычек внутри строковых значений.',
-      messages: [{ role: 'user', content: prompt }],
+      messages: [
+        { role: 'system', content: 'Отвечай ТОЛЬКО чистым JSON без markdown, без кавычек внутри строковых значений.' },
+        { role: 'user', content: prompt },
+      ],
     });
 
-    const text = message.content[0].type === 'text' ? message.content[0].text : '';
-    console.log('[trainer] raw response:', text.slice(0, 300), '...');
+    const text = message.choices[0].message.content ?? '';
 
     const stripped = text.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim();
     const jsonMatch = stripped.match(/\{[\s\S]*\}/);
@@ -119,18 +117,15 @@ export async function POST(req: Request) {
     let parsed;
     try {
       parsed = JSON.parse(raw);
-    } catch (e1) {
-      console.log('[trainer] JSON.parse failed:', String(e1));
+    } catch {
       try {
         parsed = JSON.parse(repairJson(raw));
-      } catch (e2) {
-        console.log('[trainer] repairJson failed:', String(e2));
-        console.log('[trainer] raw around error:', raw.slice(4300, 4500));
-        return NextResponse.json({ error: String(e2) }, { status: 500 });
+      } catch {
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
       }
     }
     return NextResponse.json(parsed);
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    console.error(e); return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

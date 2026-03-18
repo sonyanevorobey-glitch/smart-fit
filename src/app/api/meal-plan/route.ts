@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { query, queryOne } from '@/lib/db';
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { getSessionUserId } from '@/lib/auth';
 import type { User, FoodLog, MealPlan } from '@/lib/types';
 
-const client = new Anthropic();
+const client = new OpenAI();
 
 export async function GET(req: Request) {
   try {
@@ -18,7 +18,7 @@ export async function GET(req: Request) {
     );
     return NextResponse.json(plan);
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    console.error(e); return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -60,11 +60,11 @@ ${logged.length > 0 ? 'Добавь только недостающие приё
 
 Требования: простые блюда, сумма КБЖУ ±5% от нормы, названия на русском.`;
 
-    const message = await client.messages.create({
-      model: 'claude-sonnet-4-6', max_tokens: 1024,
+    const message = await client.chat.completions.create({
+      model: 'gpt-4o', max_tokens: 1024,
       messages: [{ role: 'user', content: prompt }],
     });
-    const text = message.content[0].type === 'text' ? message.content[0].text : '';
+    const text = message.choices[0].message.content ?? '';
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return NextResponse.json({ error: 'Failed to parse AI response' }, { status: 500 });
 
@@ -82,6 +82,6 @@ ${logged.length > 0 ? 'Добавь только недостающие приё
     );
     return NextResponse.json(plan);
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    console.error(e); return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -12,7 +12,7 @@ export async function GET() {
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
     return NextResponse.json(user);
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    console.error(e); return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -35,7 +35,7 @@ export async function PATCH(req: Request) {
     const [user] = await query<User>(`UPDATE users SET ${updates.join(', ')} WHERE id = $${idx} RETURNING *`, values);
     return NextResponse.json(user);
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    console.error(e); return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -61,17 +61,19 @@ export async function POST(req: Request) {
        body.food_preferences ?? '', body.meal_count ?? 4, userId]
     );
 
-    // Onboarding = fresh start: always wipe all historical data so no demo/stale data shows
-    await Promise.all([
-      query('DELETE FROM food_logs WHERE user_id=$1', [userId]),
-      query('DELETE FROM weight_logs WHERE user_id=$1', [userId]),
-      query('DELETE FROM meal_plans WHERE user_id=$1', [userId]),
-      query('DELETE FROM chat_messages WHERE user_id=$1', [userId]),
-      query('DELETE FROM water_logs WHERE user_id=$1', [userId]),
-    ]);
+    // Wipe historical data only when explicitly requested (onboarding fresh start)
+    if (body.reset === true) {
+      await Promise.all([
+        query('DELETE FROM food_logs WHERE user_id=$1', [userId]),
+        query('DELETE FROM weight_logs WHERE user_id=$1', [userId]),
+        query('DELETE FROM meal_plans WHERE user_id=$1', [userId]),
+        query('DELETE FROM chat_messages WHERE user_id=$1', [userId]),
+        query('DELETE FROM water_logs WHERE user_id=$1', [userId]),
+      ]);
+    }
 
     return NextResponse.json(user);
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    console.error(e); return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

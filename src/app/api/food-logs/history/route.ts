@@ -18,6 +18,6 @@ export async function GET() {
     );
     return NextResponse.json(rows);
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    console.error(e); return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

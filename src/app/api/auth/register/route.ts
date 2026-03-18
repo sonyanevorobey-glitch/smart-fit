@@ -35,6 +35,6 @@ export async function POST(req: Request) {
     res.cookies.set('sf_uid', String(user.id), { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 60*60*24*30 });
     return res;
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    console.error(e); return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
